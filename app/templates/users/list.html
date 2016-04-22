@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block styles %}
+    <script type="text/javascript" src="{{ url_for('static', filename='bower_components/underscore/underscore-min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='bower_components/fancybox/source/jquery.fancybox.pack.js') }}"></script>
+    <script type="text/javascript">
+        window.script_settings = {
+            'fetch_url': "{{ url_for('api.list') }}",
+            'fetch_one_url': "{{ url_for('api.get') }}",
+            'insert_url': "{{ url_for('api.insert') }}",
+            'update_url': "{{ url_for('api.update') }}",
+            'delete_url': "{{ url_for('api.delete') }}",
+            'update_password_url': "{{ url_for('api.new_password') }}"
+        };
+        $.ajaxSetup({
+            beforeSend: function (xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", "{{ token }}");
+            }
+        });
+    </script>
+    <script type="text/javascript" src="{{ url_for('static', filename='vendor/js/cabinet.min.js') }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='vendor/css/user_list.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bower_components/fancybox/source/jquery.fancybox.css') }}" />
+{% endblock %}
+{% block title %}Списко пользователей{% endblock %}
+
+{% block content %}
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">Пользователи</a>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                {% if g.user.grant %}
+                    <li class="active">
+                        <a href="#" id="create-user-button">Создать пользователя</a>
+                    </li>
+                {% endif %}
+                <li>
+                    <a href="{{ url_for('auth.logout') }}">Выйти</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="user-list" class="table-responsive"></div>
+        <div id="pagination"></div>
+    </div>
+
+    <script type="text/template" id="user-list-template">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Ид</th>
+                    <th>Логин</th>
+                    {% if g.user.grant %}
+                       <th>Функции</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                <% _.each(data, function (v, k) { %>
+                    <tr>
+                        <td><%= v.pk %></td>
+                        <td><%= v.login %></td>
+                        {% if g.user.grant %}
+                            <td>
+                                    <a href="#" class="btn btn-success update-button" title="Редактировать" data-pk="<%= v.pk %>">
+                                        <i class="glyphicon glyphicon-pencil"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-primary new-password-button" title="Сменить пароль" data-pk="<%= v.pk %>">
+                                        <i class="glyphicon glyphicon-eye-close"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-danger delete-button" data-pk="<%= v.pk %>" title="Удалить">
+                                        <i class="glyphicon glyphicon-remove"></i>
+                                    </a>
+                            </td>
+                        {% endif %}
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </script>
+
+    <script type="text/template" id="pagination-template">
+        <nav>
+            <ul class="pager">
+                <li <% if (!data.has_prev) { %>class="disabled" <% } %> >
+                    <a href="#" class="prev-page">&larr;&nbsp;Туда</a>
+                </li>
+                <li <% if (!data.has_next) { %>class="disabled" <% } %> >
+                    <a href="#" class="next-page">Сюда&nbsp;&rarr;</a>
+                </li>
+            </ul>
+        </nav>
+    </script>
+
+    {% if g.user.grant %}
+        <script type="text/template" id="create-user-template">
+            <div class="container">
+                <form class="form-horizontal well">
+                    <div class="text-danger"></div>
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">
+                            Логин
+                        </label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="text" class="form-control" name="login" placeholder="Логин" required="required" />
+                            <div class="text-danger login-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">Пароль</label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="password" class="form-control" name="password" placeholder="Пароль" required="required" />
+                            <div class="text-danger password-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">Повторите пароль</label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="password" class="form-control" name="repassword" placeholder="Повторите пароль" required="required" />
+                            <div class="text-danger repassword-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-8 col-xs-12 col-sm-offset-4 col-xs-12">
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="grant" /> Есть ли права?
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-8 col-sm-offset-4 col-xs-12">
+                            <input type="submit" class="btn btn-primary" value="Создать" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </script>
+
+        <script type="text/template" id="update-user-template">
+            <div class="container">
+                <form class="form-horizontal well">
+                    <div class="text-danger"></div>
+                    <input type="hidden" name="pk" valuie="" />
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">
+                            Логин
+                        </label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="text" class="form-control" name="login" placeholder="Логин" required="required" />
+                            <div class="text-danger login-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-8 col-xs-12 col-sm-offset-4 col-xs-12">
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="grant" /> Есть ли права?
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-8 col-sm-offset-4 col-xs-12">
+                            <input type="submit" class="btn btn-primary" value="Обновить" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </script>
+
+        <script type="text/template" id="new-password-template">
+            <div class="container">
+                <form class="form-horizontal well">
+                    <div class="text-danger"></div>
+                    <input type="hidden" name="pk" valuie="" />
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">Пароль</label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="password" class="form-control" name="password" placeholder="Пароль" required="required" />
+                            <div class="text-danger password-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 col-xs-12 control-label">Повторите пароль</label>
+                        <div class="col-sm-8 col-xs-12">
+                            <input type="password" class="form-control" name="repassword" placeholder="Повторите пароль" required="required" />
+                            <div class="text-danger repassword-error"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-8 col-sm-offset-4 col-xs-12">
+                            <input type="submit" class="btn btn-primary" value="Обновить пароль" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </script>
+    {% endif %}
+{% endblock %}
